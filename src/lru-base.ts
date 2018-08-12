@@ -1,4 +1,4 @@
-import { getDefaultOptions, setGottenOptions, IOptions } from "./default-conf";
+import { getDefaultOptions, setGottenOptions, IOptions } from "./conf";
 
 export abstract class LRU_BASE {
   protected Promise: PromiseConstructor;

@@ -1,4 +1,4 @@
-import { LRU } from "./lru-exposed";
+import { LRU } from ".";
 
 async function testCache() {
   const cache = new LRU({

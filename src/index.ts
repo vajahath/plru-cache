@@ -1,5 +1,5 @@
-import { IOptions } from "./default-conf";
-import { LRU_BASE } from "./lru-base-abstract";
+import { IOptions } from "./conf";
+import { LRU_BASE } from "./lru-base";
 import { LruNode } from "./lru-node";
 
 const CACHE_SIZE = "__@cache_size_";
