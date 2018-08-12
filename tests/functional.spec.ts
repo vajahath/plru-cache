@@ -1,5 +1,4 @@
 import { LRU } from "../src";
-import { access } from "fs";
 
 describe("functional tests", () => {
   test("flow-test-limit(2)", async () => {
