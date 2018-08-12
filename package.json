@@ -1,0 +1,20 @@
+{
+  "name": "persistent-lru",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "tsc"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.1"
+  },
+  "devDependencies": {
+    "@types/bluebird": "^3.5.23",
+    "@types/node": "^10.5.8",
+    "typescript": "^3.0.1"
+  }
+}
