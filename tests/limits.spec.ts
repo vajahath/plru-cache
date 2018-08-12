@@ -3,7 +3,7 @@ import { LRU } from "../src";
 describe("testing limit with 5", () => {
   test("add 1 item to cache and verify it", async () => {
     const cache = new LRU({
-      limit: 5
+      limit: 1
     });
     await cache.set("key1", 8989);
     const saved = await cache.get("key1");
@@ -26,5 +26,25 @@ describe("testing limit with 5", () => {
       cache.get("4")
     ]);
     expect(zero || one || two || three || four).toBeFalsy();
+  });
+
+  test.skip("", async () => {
+    const cache = new LRU({
+      limit: 5
+    });
+    const setPromises = [0, 1, 2, 3, 4].map(item => cache.set(item + "", item));
+    await Promise.all(setPromises); // cache full now!
+    console.log("all set\n", await cache.showAll());
+    // fetch tail
+    expect(await cache.get("0")).toBe(0);
+    console.log("cache-get(0)\n", await cache.showAll());
+    // cache something again
+    await cache.set("5", 5);
+    console.log("cache-set(5)\n", await cache.showAll());
+
+    const [one, five] = await Promise.all([cache.get("1"), cache.get("5")]);
+    console.log("cache get (1,5)\n", await cache.showAll());
+    expect(one).toBeUndefined();
+    expect(five).toBe(5);
   });
 });

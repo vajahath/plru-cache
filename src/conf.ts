@@ -1,8 +1,3 @@
-/**
- * if no config is given, this store will be used
- */
-const store: { [key: string]: any } = {};
-
 export interface IOptions {
   limit?: number;
   promiseLib?: any;
@@ -12,34 +7,21 @@ export interface IOptions {
   showAll?: () => PromiseLike<any>;
 }
 
-const config: { [key: string]: IOptions } = {
-  defaultOptions: {
-    limit: Infinity,
-    promiseLib: Promise,
-    async persistentSet(id: string, val: any) {
-      store[id] = val;
-      return;
-    },
-    async persistentGet(id: string) {
-      return store[id];
-    },
-    async persistentDel(id: string) {
-      delete store[id];
-      return;
-    },
-    async showAll() {
-      return JSON.stringify(store, null, 2);
-    }
+export const defaultOptions: IOptions = {
+  limit: Infinity,
+  promiseLib: Promise,
+  async persistentSet(id: string, val: any) {
+    this.store[id] = val;
+    return;
   },
-  gottenOptions: {}
+  async persistentGet(id: string) {
+    return this.store[id];
+  },
+  async persistentDel(id: string) {
+    delete this.store[id];
+    return;
+  },
+  async showAll() {
+    return JSON.stringify(this.store, null, 2);
+  }
 };
-
-export function getDefaultOptions() {
-  return config.defaultOptions;
-}
-export function setGottenOptions(options: IOptions) {
-  config.gottenOptions = options;
-}
-export function getGottenOptions() {
-  return config.gottenOptions;
-}

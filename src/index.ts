@@ -7,8 +7,18 @@ const HEAD_KEY = "__@cache_head_key_";
 const TAIL_KEY = "__@cache_tail_key_";
 
 export class LRU extends LRU_BASE {
+  private store: any = null;
+
   constructor(options: IOptions) {
     super(options);
+    if (
+      !options.persistentGet &&
+      !options.persistentDel &&
+      !options.persistentSet
+    ) {
+      // no outside store. so use default store
+      this.store = {};
+    }
   }
 
   public async init() {
@@ -19,29 +29,21 @@ export class LRU extends LRU_BASE {
   }
 
   public async set(key: string, val: any) {
-    const node = new LruNode(key, val);
-    const foundNode = await LruNode.find(this.persistentGet, key);
+    const node = new LruNode({ key, val });
+    const foundNode = await this.findNode(key);
     if (foundNode) {
-      await LruNode.remove(
-        this.persistentGet,
-        this.persistentDel,
-        foundNode.key
-      );
+      await this.delNode(foundNode.key);
     } else {
       const currentCacheSize = await this.getSize();
       if (currentCacheSize >= this.limit) {
         const tailNode = await this.getTailNode();
-        await LruNode.remove(
-          this.persistentGet,
-          this.persistentDel,
-          tailNode.key
-        );
+        await this.delNode(tailNode.key);
         await this.setSize(currentCacheSize - 1);
         await this.setTailKey(tailNode.prevKey);
         const newTail = await this.getTailNode(tailNode.prevKey);
         if (newTail) {
           newTail.nextKey = null;
-          await newTail.save(this.persistentSet);
+          await this.saveNode(newTail);
         }
       }
     }
@@ -49,12 +51,12 @@ export class LRU extends LRU_BASE {
   }
 
   public async get(key: string) {
-    const foundNode = await LruNode.find(this.persistentGet, key);
+    const foundNode = await this.findNode(key);
 
     if (foundNode) {
       const val = foundNode.val;
-      const node = new LruNode(key, val);
-      await LruNode.remove(this.persistentGet, this.persistentDel, key);
+      const node = new LruNode({ key, val });
+      await this.delNode(key);
       await this.setHeadKey(node.key);
       return val;
     } else {
@@ -64,9 +66,9 @@ export class LRU extends LRU_BASE {
   }
 
   public async remove(key: string) {
-    const node = await LruNode.find(this.persistentGet, key);
-    const nodePrevNode = await LruNode.find(this.persistentGet, node.prevKey);
-    const nodeNextNode = await LruNode.find(this.persistentGet, node.nextKey);
+    const node = await this.findNode(key);
+    const nodePrevNode = await this.findNode(node.prevKey);
+    const nodeNextNode = await this.findNode(node.nextKey);
 
     if (nodePrevNode) {
       nodePrevNode.nextKey = node.nextKey;
@@ -78,9 +80,9 @@ export class LRU extends LRU_BASE {
     } else {
       this.setTailKey(nodePrevNode.key);
     }
-    await nodePrevNode.save(this.persistentSet);
-    await nodeNextNode.save(this.persistentSet);
-    await LruNode.remove(this.persistentGet, this.persistentDel, node.key);
+    await this.saveNode(nodePrevNode);
+    await this.saveNode(nodeNextNode);
+    await this.delNode(node.key);
     return node;
   }
 
@@ -106,44 +108,67 @@ export class LRU extends LRU_BASE {
   }
 
   private async setSize(size: number): Promise<void> {
-    await this.persistentSet(CACHE_SIZE, size);
+    await this.persistentSet.call(this, CACHE_SIZE, size);
     return;
   }
 
   private async getSize(): Promise<number> {
-    const size = await this.persistentGet(CACHE_SIZE);
+    const size = await this.persistentGet.call(this, CACHE_SIZE);
     return size;
   }
 
   private async getHeadKey(): Promise<string> {
-    const headKey = await this.persistentGet(HEAD_KEY);
+    const headKey = await this.persistentGet.call(this, HEAD_KEY);
     return headKey;
+  }
+
+  private async findNode(key: string): Promise<LruNode> {
+    const node = await this.persistentGet.call(this, key);
+    if (node) {
+      return new LruNode(node);
+    } else {
+      return null;
+    }
+  }
+
+  private async saveNode(node: LruNode): Promise<void> {
+    await this.persistentSet.call(this, node.key, node);
+  }
+
+  private async delNode(key: string): Promise<LruNode> {
+    const node = await this.persistentGet.call(this, key);
+    await this.persistentDel.call(this, key);
+    if (node) {
+      return new LruNode(node);
+    } else {
+      return null;
+    }
   }
 
   private async getHeadNode(key?: string) {
     const headKey = key || (await this.getHeadKey());
-    const headNode = await LruNode.find(this.persistentGet, headKey);
+    const headNode = await this.findNode(headKey);
     return headNode;
   }
 
   private async getTailKey(): Promise<string> {
-    const tailKey = await this.persistentGet(TAIL_KEY);
+    const tailKey = await this.persistentGet.call(this, TAIL_KEY);
     return tailKey;
   }
 
   private async getTailNode(key?: string) {
     const tailKey = key || (await this.getTailKey());
-    const tailNode = await LruNode.find(this.persistentGet, tailKey);
+    const tailNode = await this.findNode(tailKey);
     return tailNode;
   }
 
   private async setHeadKey(key: string) {
-    await this.persistentSet(HEAD_KEY, key);
+    await this.persistentSet.call(this, HEAD_KEY, key);
     return;
   }
 
   private async setTailKey(key: string) {
-    await this.persistentSet(TAIL_KEY, key);
+    await this.persistentSet.call(this, TAIL_KEY, key);
     return;
   }
 
@@ -155,7 +180,7 @@ export class LRU extends LRU_BASE {
     const head = await this.getHeadNode(headId);
     if (head) {
       head.prevKey = node.key;
-      await head.save(this.persistentSet);
+      await this.saveNode(head);
     }
     await this.setHeadKey(node.key);
     const tail = await this.getTailNode();
@@ -163,6 +188,6 @@ export class LRU extends LRU_BASE {
       await this.setTailKey(node.key);
     }
     await this.setSize((await this.getSize()) + 1);
-    await node.save(this.persistentSet);
+    await this.saveNode(node);
   }
 }
