@@ -1,14 +1,14 @@
 {
-  "name": "persistent-lru",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "plru-cache",
+  "version": "0.1.0",
+  "description": "LRU Cache, but persistent.",
+  "main": "dist/src/index.js",
   "scripts": {
     "test": "npm run purge && npm run compile && jest",
     "compile": "tsc",
     "purge": "rimraf dist"
   },
-  "author": "",
+  "author": "Vajahath Ahmed <vajuoff.1@gmail.com>",
   "license": "ISC",
   "dependencies": {},
   "devDependencies": {
