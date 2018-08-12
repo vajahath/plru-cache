@@ -2,7 +2,7 @@ import { getDefaultOptions, setGottenOptions, IOptions } from "./conf";
 
 export abstract class LRU_BASE {
   protected Promise: PromiseConstructor;
-  public showAll: () => PromiseLike<any>;
+  protected gottenShowAll: () => PromiseLike<any>;
   protected persistentGet: (key: string) => PromiseLike<any>;
   protected persistentDel: (key: string) => PromiseLike<any>;
   protected persistentSet: (key: string, val: any) => PromiseLike<any>;
@@ -11,7 +11,7 @@ export abstract class LRU_BASE {
   constructor(options: IOptions) {
     const defaultOptions = getDefaultOptions();
 
-    this.showAll = options.showAll || defaultOptions.showAll;
+    this.gottenShowAll = options.showAll || defaultOptions.showAll;
     this.Promise = options.promiseLib || Promise;
     this.persistentGet = options.persistentGet || defaultOptions.persistentGet;
     this.persistentSet = options.persistentSet || defaultOptions.persistentSet;
@@ -19,5 +19,9 @@ export abstract class LRU_BASE {
     this.limit = options.limit || defaultOptions.limit;
 
     setGottenOptions(Object.assign({}, defaultOptions, options));
+  }
+
+  public async showAll() {
+    return await this.gottenShowAll();
   }
 }

@@ -9,7 +9,7 @@
     "typeRoots": ["node_modules/@types", "typings"],
     "lib": ["es2017"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tests/**/*"],
   "exclude": ["node_modules"],
   "compileOnSave": false
 }

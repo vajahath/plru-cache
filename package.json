@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "compile": "tsc"
+    "test": "npm run purge && npm run compile && jest",
+    "compile": "tsc",
+    "purge": "rimraf dist"
   },
   "author": "",
   "license": "ISC",
@@ -14,7 +15,10 @@
   },
   "devDependencies": {
     "@types/bluebird": "^3.5.23",
+    "@types/jest": "^23.3.1",
     "@types/node": "^10.5.8",
+    "jest": "^23.5.0",
+    "rimraf": "^2.6.2",
     "typescript": "^3.0.1"
   }
 }
