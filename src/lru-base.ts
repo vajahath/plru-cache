@@ -9,6 +9,10 @@ export abstract class LRU_BASE {
   protected limit: number;
 
   constructor(options: IOptions) {
+    if (options.limit < 1) {
+      throw new Error("Limit<1 is not allowed");
+    }
+
     this.gottenShowAll = options.showAll || defaultOptions.showAll;
     this.Promise = options.promiseLib || Promise;
     this.persistentGet = options.persistentGet || defaultOptions.persistentGet;

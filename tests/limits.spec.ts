@@ -1,4 +1,5 @@
 import { LRU } from "../src";
+import { access } from "fs";
 
 describe("functional tests", () => {
   test("flow-test-limit(2)", async () => {
@@ -44,7 +45,7 @@ describe("functional tests", () => {
     expect(headers.tailKey).toBe("three");
   });
 
-  test("add 1 item to cache and verify it", async () => {
+  test("flow-test-limit(1)", async () => {
     const cache = new LRU({
       limit: 1
     });
@@ -70,14 +71,24 @@ describe("functional tests", () => {
     expect(headers.tailKey).toBe("meaw meaw");
   });
 
-  test("add 10 item to cache, verify first 5 are deleted", async () => {
+  test("flow-test-limit(0)", async () => {
+    try {
+      const cache = new LRU({
+        limit: 0
+      });
+    } catch (err) {
+      expect(err.message).toBe("Limit<1 is not allowed");
+    }
+  });
+
+  test.skip("add 10 item to cache, verify first 5 are deleted", async () => {
     const cache = new LRU({
       limit: 5
     });
     await cache.init();
 
     const setPromises = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(item =>
-      cache.set(item + "iio", item)
+      cache.set(item + "", item)
     );
     await Promise.all(setPromises);
     const [zero, one, two, three, four] = await Promise.all([
@@ -87,6 +98,15 @@ describe("functional tests", () => {
       cache.get("3"),
       cache.get("4")
     ]);
+    console.log(await cache.showAll());
     expect(zero || one || two || three || four).toBeFalsy();
+    const secondHalf = await Promise.all([
+      cache.get("5"),
+      cache.get("6"),
+      cache.get("7"),
+      cache.get("8"),
+      cache.get("9")
+    ]);
+    expect(secondHalf.reduce((acc, val) => acc + val)).toBe(35);
   });
 });

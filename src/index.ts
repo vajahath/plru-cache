@@ -11,6 +11,7 @@ export class LRU extends LRU_BASE {
 
   constructor(options: IOptions) {
     super(options);
+
     if (
       !options.persistentGet &&
       !options.persistentDel &&
