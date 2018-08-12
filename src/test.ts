@@ -1,12 +1,14 @@
-import { PLRU } from "./lru";
+import { LRU } from "./lru-exposed";
 
 async function testCache() {
-  const cache = new PLRU(5);
+  const cache = new LRU({
+    limit: 5
+  });
 
   console.log("cache init");
   await cache.init();
 
-  cache.show();
+  console.log(await cache.showAll());
 
   try {
     await cache.set("a", 55);
@@ -20,7 +22,7 @@ async function testCache() {
     console.log(err);
   }
 
-  cache.show();
+  console.log(await cache.showAll());
 }
 
 testCache();

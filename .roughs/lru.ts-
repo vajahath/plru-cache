@@ -1,0 +1,230 @@
+import { defaultOptions, IOptions } from "./default-conf";
+
+const CACHE_SIZE = "__@cache_size_";
+const HEAD_KEY = "__@cache_head_key_";
+const TAIL_KEY = "__@cache_tail_key_";
+
+export class LRU {
+  public showAll: () => PromiseLike<any>;
+
+  constructor(options: IOptions) {
+    // public
+    this.showAll = options.showAll || defaultOptions.showAll;
+
+    // protected
+    this.Promise = options.promiseLib || Promise;
+    this.persistentGet = options.persistentGet || defaultOptions.persistentGet;
+    this.persistentSet = options.persistentSet || defaultOptions.persistentSet;
+
+    // private
+    this.limit = options.limit || defaultOptions.limit;
+
+    gottenOptions = Object.assign({}, options, defaultOptions);
+  }
+
+  protected Promise: PromiseConstructor; // comeback here later
+  protected persistentGet: (key: string) => PromiseLike<any>;
+  protected persistentSet: (key: string, val: any) => PromiseLike<any>;
+
+  private limit: number;
+
+  public async init() {
+    if (await this.isFreshCache()) {
+      await this.initMetaData();
+      return;
+    }
+  }
+
+  public async set(key: string, val: any) {
+    const node = new LruNode(key, val);
+    const foundNode = await LruNode.find(key);
+    if (foundNode) {
+      await LruNode.remove(foundNode.key);
+    } else {
+      const currentCacheSize = await this.getSize();
+      if (currentCacheSize >= this.limit) {
+        const tailNode = await this.getTailNode();
+        await LruNode.remove(tailNode.key);
+        await this.setSize(currentCacheSize - 1);
+        await this.setTailKey(tailNode.prevKey);
+        const newTail = await this.getTailNode(tailNode.prevKey);
+        if (newTail) {
+          newTail.nextKey = null;
+          await newTail.save();
+        }
+      }
+    }
+    await this.setHead(node);
+  }
+
+  public async get(key: string) {
+    const foundNode = await LruNode.find(key);
+
+    if (foundNode) {
+      const val = foundNode.val;
+      const node = new LruNode(key, val);
+      await LruNode.remove(key);
+      await this.setHeadKey(node.key);
+      return val;
+    } else {
+      console.log(`Key ${key} not stored in cache`);
+      return undefined;
+    }
+  }
+
+  public async remove(key: string) {
+    const node = await LruNode.find(key);
+    const nodePrevNode = await LruNode.find(node.prevKey);
+    const nodeNextNode = await LruNode.find(node.nextKey);
+
+    if (nodePrevNode) {
+      nodePrevNode.nextKey = node.nextKey;
+    } else {
+      await this.setHeadKey(nodeNextNode.key);
+    }
+    if (nodeNextNode) {
+      nodeNextNode.prevKey = node.prevKey;
+    } else {
+      this.setTailKey(nodePrevNode.key);
+    }
+    await nodePrevNode.save();
+    await nodeNextNode.save();
+    await LruNode.remove(node.key);
+    return node;
+  }
+
+  private async isFreshCache() {
+    const [size, headKey, tailKey] = await this.Promise.all([
+      this.getSize(),
+      this.getHeadKey(),
+      this.getTailKey()
+    ]);
+    if (size || headKey || tailKey) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  private initMetaData() {
+    return this.Promise.all([
+      this.setSize(0),
+      this.setHeadKey(null),
+      this.setTailKey(null)
+    ]);
+  }
+
+  private async setSize(size: number): Promise<void> {
+    await this.persistentSet(CACHE_SIZE, size);
+    return;
+  }
+
+  private async getSize(): Promise<number> {
+    const size = await this.persistentGet(CACHE_SIZE);
+    return size;
+  }
+
+  private async getHeadKey(): Promise<string> {
+    const headKey = await this.persistentGet(HEAD_KEY);
+    return headKey;
+  }
+
+  private async getHeadNode(key?: string) {
+    const headKey = key || (await this.getHeadKey());
+    const headNode = await LruNode.find(headKey);
+    return headNode;
+  }
+
+  private async getTailKey(): Promise<string> {
+    const tailKey = await this.persistentGet(TAIL_KEY);
+    return tailKey;
+  }
+
+  private async getTailNode(key?: string) {
+    const tailKey = key || (await this.getTailKey());
+    const tailNode = await LruNode.find(tailKey);
+    return tailNode;
+  }
+
+  private async setHeadKey(key: string) {
+    await this.persistentSet(HEAD_KEY, key);
+    return;
+  }
+
+  private async setTailKey(key: string) {
+    await this.persistentSet(TAIL_KEY, key);
+    return;
+  }
+
+  private async setHead(node: LruNode) {
+    const headId = await this.getHeadKey();
+    node.nextKey = headId;
+    node.prevKey = null;
+
+    const head = await this.getHeadNode(headId);
+    if (head) {
+      head.prevKey = node.key;
+      await head.save();
+    }
+    await this.setHeadKey(node.key);
+    const tail = await this.getTailNode();
+    if (!tail) {
+      await this.setTailKey(node.key);
+    }
+    await this.setSize((await this.getSize()) + 1);
+    await node.save();
+  }
+}
+
+class LruNode {
+  public nextKey: string;
+  public prevKey: string;
+  public val: any;
+  public key: string;
+
+  constructor(
+    key: string,
+    val: any,
+    nextKey: string = null,
+    prevKey: string = null
+  ) {
+    this.key = key;
+    this.val = val;
+    this.nextKey = nextKey;
+    this.prevKey = prevKey;
+  }
+
+  public async save(): Promise<void> {
+    return new Promise(resolve => {
+      store[this.key] = {
+        id: this.key,
+        val: this.val,
+        nextKey: this.nextKey,
+        prevKey: this.prevKey
+      };
+      resolve();
+    });
+  }
+  public static remove(id: string): PromiseLike<LruNode> {
+    return new Promise(resolve => {
+      const node = store[id];
+      delete store[id];
+      resolve(node);
+    });
+  }
+  public static find(gottenId: string): PromiseLike<LruNode> {
+    return new Promise(resolve => {
+      const data = store[gottenId];
+      if (data) {
+        const node = new LruNode(
+          data.key,
+          data.val,
+          data.nextKey,
+          data.prevKey
+        );
+        return resolve(node);
+      }
+      resolve(null);
+    });
+  }
+}
