@@ -81,6 +81,42 @@ describe("functional tests", () => {
     }
   });
 
+  test("normal-flow", async () => {
+    const cache = new LRU({
+      limit: 5
+    });
+    await cache.init();
+
+    await cache.set("1", 1);
+    await cache.set("2", 2);
+    await cache.set("3", 3);
+    await cache.set("4", 4);
+    await cache.set("5", 5);
+    await cache.set("6", 6);
+    await cache.set("7", 7);
+    await cache.set("8", 8);
+
+    let headers = await cache._getHeaders();
+    expect(headers.size).toBe(5);
+    expect(headers.headKey).toBe("8");
+    expect(headers.tailKey).toBe("4");
+
+    expect(await cache.get("3")).toBeUndefined();
+    expect(await cache.get("6")).toBe(6);
+
+    headers = await cache._getHeaders();
+    expect(headers.size).toBe(5);
+    expect(headers.headKey).toBe("6");
+    expect(headers.tailKey).toBe("4");
+
+    await cache.remove("7");
+
+    headers = await cache._getHeaders();
+    expect(headers.size).toBe(4);
+    expect(headers.headKey).toBe("6");
+    expect(headers.tailKey).toBe("4");
+  });
+
   test.skip("add 10 item to cache, verify first 5 are deleted", async () => {
     const cache = new LRU({
       limit: 5
