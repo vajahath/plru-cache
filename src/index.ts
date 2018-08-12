@@ -75,12 +75,17 @@ export class LRU extends LRU_BASE {
       await this.saveNode(nodePrevNode);
     } else if (nodeNextNode) {
       await this.setHeadKey(nodeNextNode.key);
+    } else {
+      await this.setHeadKey(null);
     }
+
     if (nodeNextNode) {
       nodeNextNode.prevKey = node.prevKey;
       await this.saveNode(nodeNextNode);
     } else if (nodePrevNode) {
-      this.setTailKey(nodePrevNode.key);
+      await this.setTailKey(nodePrevNode.key);
+    } else {
+      await this.setTailKey(null);
     }
     await this.delNode(node.key);
     await this.setSize((await this.getSize()) - 1);
