@@ -1,13 +1,13 @@
 const store: any = {};
 
-export class LRU {
+export class PLRU {
   private limit: number;
 
   constructor(limit: number) {
     this.limit = limit;
   }
 
-  public show() {
+  public showAll() {
     console.log(JSON.stringify(store, null, 2));
   }
 
@@ -87,24 +87,22 @@ export class LRU {
     const head = await this.getHead(headId);
     if (head) {
       head.prevId = node.id;
-      head.id = node.id;
+      await head.save();
     }
+    await this.setHeadId(node.id);
     const tail = await this.getTail();
     if (!tail) {
       await this.setTailId(node.id);
     }
     await this.setSize((await this.getSize()) + 1);
-    node.save();
+    await node.save();
   }
 
-  public async keep(id: string, val: any) {
+  public async set(id: string, val: any) {
     const node = new LruNode(id, val);
     const foundNode = await LruNode.find(id);
     if (foundNode) {
-      // do we need this block?
-      foundNode.val = node.val;
-      await foundNode.save();
-      LruNode.remove(foundNode.id);
+      await LruNode.remove(foundNode.id);
     } else {
       const currentCacheSize = await this.getSize();
       if (currentCacheSize >= this.limit) {
@@ -122,7 +120,7 @@ export class LRU {
     await this.setHead(node);
   }
 
-  public async retrieve(id: string) {
+  public async get(id: string) {
     const foundNode = await LruNode.find(id);
 
     if (foundNode) {
@@ -165,11 +163,16 @@ class LruNode {
   public val: any;
   public id: string;
 
-  constructor(id: string, val: any) {
+  constructor(
+    id: string,
+    val: any,
+    nextId: string = null,
+    prevId: string = null
+  ) {
     this.id = id;
     this.val = val;
-    this.nextId = null;
-    this.prevId = null;
+    this.nextId = nextId;
+    this.prevId = prevId;
   }
 
   public save(): PromiseLike<LruNode> {
@@ -190,7 +193,14 @@ class LruNode {
       resolve(node);
     });
   }
-  public static find(id: string): PromiseLike<LruNode> {
-    return new Promise(resolve => resolve(store[id]));
+  public static find(gottenId: string): PromiseLike<LruNode> {
+    return new Promise(resolve => {
+      const data = store[gottenId];
+      if (data) {
+        const node = new LruNode(data.id, data.val, data.nextId, data.prevId);
+        return resolve(node);
+      }
+      resolve(null);
+    });
   }
 }
