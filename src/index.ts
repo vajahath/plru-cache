@@ -58,7 +58,7 @@ export class LRU extends LRU_BASE {
       await this.setHeadKey(node.key);
       return val;
     } else {
-      console.log(`Key ${key} not stored in cache`);
+      // console.log(`Key ${key} not stored in cache`);
       return undefined;
     }
   }
