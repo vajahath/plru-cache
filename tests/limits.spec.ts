@@ -44,7 +44,7 @@ describe("functional tests", () => {
     expect(headers.tailKey).toBe("three");
   });
 
-  test.only("add 1 item to cache and verify it", async () => {
+  test("add 1 item to cache and verify it", async () => {
     const cache = new LRU({
       limit: 1
     });
@@ -56,13 +56,18 @@ describe("functional tests", () => {
     expect(saved).toBe(8989);
 
     await cache.remove("key1");
-    let headers = await cache._getHeaders();
 
+    let headers = await cache._getHeaders();
     expect(headers.size).toBe(0);
     expect(headers.headKey).toBe(null);
     expect(headers.tailKey).toBe(null);
 
-    console.log(await cache.showAll());
+    await cache.set("meaw meaw", "cat");
+
+    headers = await cache._getHeaders();
+    expect(headers.size).toBe(1);
+    expect(headers.headKey).toBe("meaw meaw");
+    expect(headers.tailKey).toBe("meaw meaw");
   });
 
   test("add 10 item to cache, verify first 5 are deleted", async () => {
